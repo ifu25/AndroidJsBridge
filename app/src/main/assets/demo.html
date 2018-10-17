@@ -1,0 +1,134 @@
+<html>
+
+<head>
+    <meta content="text/html; charset=utf-8" http-equiv="content-type">
+    <title>JS 调用 Java 演示 - QQ263499118</title>
+    <style>
+        #show {
+            color: #F00;
+        }
+    </style>
+</head>
+
+<body>
+    <p>
+        <xmp id="show"> </xmp>
+    </p>
+    <p>
+        <xmp id="init"> </xmp>
+    </p>
+
+    <p>
+        <input type="text" id="txtUserName" value="用户名" />
+    </p>
+    <p>
+        <input type="text" id="txtPassword" value="密码" /> </p>
+    <p>
+        <input type="button" id="enter" value="发送消息给java" onclick="sendInfo();" />
+    </p>
+    <p>
+        <input type="button" id="enter1" value="调用java的Login" onclick="login();" />
+    </p>
+    <p>
+        <input type="button" id="enter2" value="显示html" onclick="showHtml();" />
+    </p>
+    <p>
+        <input type="file" value="打开文件" />
+    </p>
+    <p>
+        <input type="button" value="扫描二维码" onclick="scanQRCode();" />
+    </p>
+
+</body>
+<script>
+    //显示结果
+    function showResult(result) {
+        document.getElementById("show").innerHTML = result;
+    }
+
+    //显示网页源代码
+    function showHtml() {
+        showResult(document.getElementsByTagName("html")[0].innerHTML);
+    }
+
+    //发送消息给java的默认handler
+    function sendInfo() {
+
+        //提交信息给java
+        var data = "随便发着什么内容~";
+        window.WebViewJavascriptBridge.send(data, function (responseData) {
+            showResult(responseData);
+        });
+    }
+
+    //提交登录信息
+    function login() {
+        var str1 = document.getElementById("txtUserName").value;
+        var str2 = document.getElementById("txtPassword").value;
+        var data = { username: str1, password: str2 };
+
+        //调用java的login方法，显示返回的结果
+        window.WebViewJavascriptBridge.callHandler('login', data, function (responseData) {
+            showResult(responseData);
+        });
+    }
+
+    //扫描二维码
+    function scanQRCode() {
+
+        //调用java的scanQRCode方法，显示返回的结果
+        window.WebViewJavascriptBridge.callHandler('scanQRCode', '', function (result) {
+            showResult("二维码：" + result);
+        });
+    }
+
+    /************************************
+    This lib will inject a WebViewJavascriptBridge Object to window object. 
+    So in your js, before use WebViewJavascriptBridge, you must detect if WebViewJavascriptBridge exist. 
+    If WebViewJavascriptBridge does not exit,you can listen to WebViewJavascriptBridgeReady event
+    ************************************/
+    function connectWebViewJavascriptBridge(callback) {
+        if (window.WebViewJavascriptBridge) {
+            callback(WebViewJavascriptBridge) //WebViewJavascriptBridge存在则初始化
+        } else {
+            //WebViewJavascriptBridge不存在则注册监听，等存在了再初始化
+            document.addEventListener('WebViewJavascriptBridgeReady', function () {
+                callback(WebViewJavascriptBridge)
+            }, false);
+        }
+    }
+
+    //在这里注册供java调用的js方法
+    connectWebViewJavascriptBridge(function (bridge) {
+
+        //注册默认方法，java不指定方法名时会调用这个方法，java调用方法：mWebView.send("hello");
+        //define a default handler use init method, so that Java can send message to js without assigned handlerName
+        bridge.init(function (message, responseCallback) {
+            console.log('JS 找到一个消息', message);
+
+            var data = { 'JS 的响应数据': '我是来自JS的!' };
+
+            if (responseCallback) {
+                console.log('JS 调用了 java 的回调函数，并返回了以下内容：', data);
+                responseCallback(data);
+            }
+        });
+
+        //注册供java调用的js方法
+        bridge.registerHandler("functionInJs", function (data, responseCallback) {
+
+            showResult("来自java的数据：" + data);
+
+            //触发java的回调函数
+            if (responseCallback) {
+                var responseData = "我是JS返回的数据！";
+                responseCallback(responseData);
+            }
+        });
+
+        //继续注册其它js方法...
+
+    })
+</script>
+
+</html>
